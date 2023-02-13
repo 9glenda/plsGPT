@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"encoding/json"
+
 	//"flag"
 	"fmt"
-  "strings"
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/PullRequestInc/go-gpt3"
 	"github.com/alecthomas/chroma/quick"
 )
+
 type payload struct {
 	Text string `json:"text"`
 }
@@ -26,6 +28,13 @@ type response struct {
 type Config struct {
 	Commands map[string]string
 }
+
+const (
+	blue  = "\033[34m"
+	reset = "\033[0m"
+
+	pink = "\033[95m"
+)
 
 func doJson(client gpt3.Client, r io.Reader, w io.Writer) error {
 	enc := json.NewEncoder(w)
@@ -83,20 +92,35 @@ func Gpt(text string, apiKey string) string {
 			Temperature: gpt3.Float32Ptr(0),
 		}, func(resp *gpt3.CompletionResponse) {
 			//fmt.Print(resp.Choices[0].Text)
-      if resp.Choices[0].Text != "" && resp.Choices[0].Text != "\n" {
-			Result += resp.Choices[0].Text
-    }
+			if resp.Choices[0].Text != "" && resp.Choices[0].Text != "\n" {
+				Result += resp.Choices[0].Text
+			}
 		})
 	if err != nil {
 		log.Panic(err)
 	}
-	return strings.TrimLeft(Result, "\n")
+	return strings.TrimPrefix(strings.TrimLeft(Result, "\n"), "$ ")
 }
 
-func fakeGpt(_ string,_ string) string {
-  return "fakegpt run \"hello\""
+func fakeGpt(_ string, _ string) string {
+	return "fakegpt run \"hello\" <hello>"
 }
 
+func fillTemplate(template string) string {
+	start := strings.Index(template, "<")
+	end := strings.Index(template, ">")
+	if start != -1 && end != -1 && end > start {
+		placeholder := template[start+1 : end]
+		var value string
+		fmt.Printf("Please fill in the %s%s%s: ", pink, placeholder, reset)
+		fmt.Scanln(&value)
+		if value == "" {
+			value = "<" + placeholder + ">"
+		}
+		return strings.ReplaceAll(template, "<"+placeholder+">", value)
+	}
+	return template
+}
 
 func main() {
 	apiKey := os.Getenv("OPENAI_API_KEY")
@@ -106,9 +130,11 @@ func main() {
 
 	args := os.Args
 	if len(args) == 2 {
-		text := "plain text linux command, no explonation text,without a leading $ to" + args[1]
+		text := "plain text linux command, no explonation text,to" + args[1]
 		resp := Gpt(text, apiKey)
-    err := quick.Highlight(os.Stdout, fmt.Sprint(resp), "bash", "terminal16m", "")
+		resp = fillTemplate(resp)
+		fmt.Printf("%s$ %s", blue, reset)
+		err := quick.Highlight(os.Stdout, fmt.Sprint(resp), "bash", "terminal16m", "")
 		if err != nil {
 			fmt.Println(err)
 		}
