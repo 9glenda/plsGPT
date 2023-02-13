@@ -106,21 +106,47 @@ func fakeGpt(_ string, _ string) string {
 	return "fakegpt run \"hello\" <hello>"
 }
 
-func fillTemplate(template string) string {
-	start := strings.Index(template, "<")
-	end := strings.Index(template, ">")
-	if start != -1 && end != -1 && end > start {
-		placeholder := template[start+1 : end]
-		var value string
-		fmt.Printf("Please fill in the %s%s%s: ", pink, placeholder, reset)
-		fmt.Scanln(&value)
-		if value == "" {
-			value = "<" + placeholder + ">"
-		}
-		return strings.ReplaceAll(template, "<"+placeholder+">", value)
-	}
-	return template
+
+func fillTemplateOld(template string) string {
+  for {
+    start := strings.Index(template, "<")
+    end := strings.Index(template, ">")
+    if start != -1 && end != -1 && end > start {
+      placeholder := template[start+1 : end]
+      var value string
+      fmt.Printf("Please fill in the %s%s%s: ", pink, placeholder, reset)
+      fmt.Scanln(&value)
+      if value == "" {
+        value = "<" + placeholder + ">"
+      }
+      template = strings.ReplaceAll(template, "<"+placeholder+">", value)
+    } else {
+      break
+    }
+  }
+  return template
 }
+
+func fillTemplate(template string) string {
+  for {
+    start := strings.Index(template, "<")
+    end := strings.Index(template, ">")
+    if start != -1 && end != -1 && end > start {
+      placeholder := template[start+1 : end]
+      var value string
+      fmt.Printf("Please fill in the %s%s%s: ", pink, placeholder, reset)
+      fmt.Scanln(&value)
+      if value == "" {
+        value = "<" + placeholder + ">"
+      }
+      template = strings.ReplaceAll(template, "<"+placeholder+">", value)
+    } else {
+      break
+    }
+  }
+  return template
+}
+
 
 func main() {
 	apiKey := os.Getenv("OPENAI_API_KEY")
@@ -130,7 +156,7 @@ func main() {
 
 	args := os.Args
 	if len(args) == 2 {
-		text := "plain text linux command, no explonation text,to" + args[1]
+		text := "plain text linux command, no explonation text, for text to fill in manually use <>, to" + args[1]
 		resp := Gpt(text, apiKey)
 		resp = fillTemplate(resp)
 		fmt.Printf("%s$ %s", blue, reset)
